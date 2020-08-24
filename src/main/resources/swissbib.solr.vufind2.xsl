@@ -50,6 +50,11 @@
             <xsl:call-template name="lang_country">
                 <xsl:with-param name="fragment" select="record" />
             </xsl:call-template>
+
+            <xsl:call-template name="fulltext">
+                <xsl:with-param name="fragment" select="record" />
+            </xsl:call-template>
+
       </doc>
     </xsl:template>
 
@@ -90,24 +95,6 @@
             </xsl:for-each>
 
 
-            <xsl:for-each select="$fragment/datafield[@tag='041']/subfield[@code='a']/text()">
-                <xsl:choose>
-                    <xsl:when test="matches(., '\|\|\||und')" />
-                    <xsl:when test="string-length(.) &gt; 3" />
-                    <xsl:otherwise>
-                        <xsl:value-of select="concat(., '##xx##')" />
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:for-each>
-            <xsl:for-each select="$fragment/controlfield[@tag='008']">
-                <xsl:variable name="lang" select="substring(text()[1],36,3)"/>
-                <xsl:choose>
-                    <xsl:when test="matches($lang, '\|\|\||und')" />
-                    <xsl:otherwise>
-                        <xsl:value-of select="concat($fragment/substring(controlfield[@tag='008'][1],36,3), '##xx##')" />
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:for-each>
         </xsl:variable>
         <!--<xsl:variable name="uniqueSeqValues" select="swissbib:startDeduplication($forDeduplication)"/>-->
         <xsl:call-template name="prepareDedup">
@@ -129,12 +116,29 @@
         </xsl:call-template>
     </xsl:template>
 
+    <!-- fetching TOC fulltext -->
+    <xsl:template name="fulltext">
+        <xsl:param name="fragment"/>
+        <!-- reduziert (18.08.2011/osc) -->
+        <xsl:variable name="di" select="$fragment/myDocID"/>
+        <!-- ich muss hier noch etwas einbauen, dass das Feld nicht aufgebaut wird, wenn kein Text zurueckgeliefert wird -->
+        <xsl:for-each select="$fragment/uri856">
+            <xsl:variable name="url856" select="."/>
+
+            <preparedfulltext><xsl:value-of select="$url856"/></preparedfulltext>
+
+        </xsl:for-each>
+        <xsl:for-each select="$fragment/uri956">
+            <xsl:variable name="url956" select="."/>
+            <preparedfulltext><xsl:value-of select="$url956"/></preparedfulltext>
+        </xsl:for-each>
+    </xsl:template>
 
 
     <xsl:template name="prepareDedup">
         <xsl:param name="fieldname"/>
         <xsl:param name="fieldValues"/>
-        <xsl:element name="preparededup">
+        <xsl:element name="prepareddedup">
             <xsl:element name="field">
                 <xsl:attribute name="name">
                     <xsl:value-of select="$fieldname"/>
@@ -144,24 +148,6 @@
         </xsl:element>
     </xsl:template>
 
-    <xsl:template name="prepareDedup1">
-        <xsl:param name="fieldname"/>
-        <xsl:param name="fieldValues"/>
-        <xsl:variable name="seq">
-
-            <xsl:sequence select="distinct-values(tokenize(replace(normalize-space($fieldValues), '^\s*(.+?)\s*$', '$1'),'##xx##'))"/>
-            <!--<xsl:sequence select="tokenize(replace(normalize-space($fieldValues), '^\s*(.+?)\s*$', '$1'),'##xx##')"/>-->
-        </xsl:variable>
-        <xsl:for-each select="$seq">
-            <xsl:element name="field">
-                <xsl:attribute name="name">
-                    <xsl:value-of select="$fieldname"/>
-                </xsl:attribute>
-                <xsl:value-of select="."/>
-            </xsl:element>
-
-        </xsl:for-each>
-    </xsl:template>
 
 
 </xsl:stylesheet>

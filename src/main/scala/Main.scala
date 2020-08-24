@@ -4,12 +4,12 @@ import java.util.stream.Collectors
 import java.util.zip.GZIPInputStream
 
 import helper.{TemplateCreator, TemplateTransformer, XSLTDataObject}
-import utilities.OptionsParser
+import utilities.{EnrichFulltext, FilterDuplicates, OptionsParser}
 import utilities.OptionsParser.OptionMap
 
 import scala.io.Source
 import scala.xml.transform.{RewriteRule, RuleTransformer}
-import scala.xml.{Elem, Node,XML}
+import scala.xml.{Elem, Node, PCData, Text, Unparsed, XML}
 
 object Main extends App {
 
@@ -106,28 +106,26 @@ object Main extends App {
 
         val elem = parseRecord(step2Transformation)
 
-        val last = ruleDuplicate(elem)
+        val last = usePostTransformations(elem)
         println(last)
-
+        //examples xml literals: https://alvinalexander.com/scala/how-to-create-scala-xml-literals/
 
       }
 
     }
 
-    def ruleDuplicate(structure: Elem): collection.Seq[Node] = {
+    def usePostTransformations(structure: Elem): collection.Seq[Node] = {
 
-      val filterDuplicates: RewriteRule = new RewriteRule {
+      val composedRules: RewriteRule = new RewriteRule {
         override def transform(n: Node): Seq[Node] = n match {
-          case <preparededup>{childfield @ _*}</preparededup> =>
-            for {
-              elem <- (childfield \\ "field")
-              setItem: String <- elem.text.split("##xx##").toSeq.toSet
-              //todo: make it exception secure with Try
-            } yield <field name={elem.attribute("name").get.text}>{setItem.trim}</field>
+          case <prepareddedup>{childfield @ _*}</prepareddedup> =>
+            FilterDuplicates(childfield)
+          case <preparedfulltext>{Text(text)}</preparedfulltext> =>
+            EnrichFulltext(text)
           case item => item
         }
       }
-      new RuleTransformer(filterDuplicates).transform(structure)
+      new RuleTransformer(composedRules).transform(structure)
 
     }
   }
